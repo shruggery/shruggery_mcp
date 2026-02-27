@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Shruggery" width="200">
+</p>
+
 # Shruggery
 
 Local Atlassian MCP server — full Jira Cloud v3 + Confluence Cloud v2 REST API coverage with attachment upload/download.
@@ -111,7 +115,7 @@ shruggery/
     │   └── confluence_templates.py     # Page templates
     └── utils/
         ├── pagination.py       # Pagination helpers
-        └── formatting.py       # Response formatting, truncation
+        └── formatting.py       # Response formatting, truncation, markdown→ADF
 ```
 
 ## Tool Reference
@@ -139,7 +143,7 @@ shruggery/
 | Tool | Description |
 |------|-------------|
 | `get_jira_comments` | List comments on an issue |
-| `add_jira_comment` | Add a comment (plain text → ADF) |
+| `add_jira_comment` | Add a comment (markdown → ADF) |
 | `update_jira_comment` | Edit an existing comment |
 | `delete_jira_comment` | Delete a comment |
 
@@ -281,4 +285,4 @@ The key feature missing from the official Atlassian MCP.
 - **URL builders** for Jira v3, Confluence v2, Agile 1.0, and Confluence v1 fallback
 - **All tools return JSON strings** — formatted with `json.dumps(indent=2)`, truncated at 80K chars
 - **Error responses** are structured: `{"error": true, "status": 400, "detail": ...}`
-- **ADF conversion** for comments/descriptions: plain text is auto-wrapped in Atlassian Document Format paragraphs
+- **Markdown → ADF conversion** for comments/descriptions: headings, lists, tables, code blocks, blockquotes, bold/italic/links are converted to Atlassian Document Format — no external dependencies
