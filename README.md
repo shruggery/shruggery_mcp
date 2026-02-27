@@ -45,8 +45,8 @@ ATLASSIAN_EMAIL=you@example.com             # the email on your Atlassian accoun
 ATLASSIAN_API_TOKEN=your-api-token          # from step 1
 ATLASSIAN_SITE=yoursite.atlassian.net       # your Jira/Confluence cloud URL
 ATLASSIAN_CLOUD_ID=                         # optional, auto-discovered if omitted
-USER_AGENT=Mozilla/5.0 (...)                # optional, defaults to Firefox UA
 SHRUGGERY_DOWNLOAD_DIR=/tmp/shruggery       # where attachments are saved
+# USER_AGENT=...                            # optional, overrides default — may break MCP if Atlassian rejects it
 ```
 
 ### 3. Install
