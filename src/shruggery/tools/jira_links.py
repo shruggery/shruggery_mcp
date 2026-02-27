@@ -6,6 +6,7 @@ from typing import Any
 
 from shruggery.client import get_client
 from shruggery.server import mcp
+from shruggery.utils.formatting import markdown_to_adf
 
 
 @mcp.tool()
@@ -21,7 +22,7 @@ async def create_jira_link(
         inward_issue: Inward issue key (e.g. "PROJ-1").
         outward_issue: Outward issue key (e.g. "PROJ-2").
         link_type: Link type name (e.g. "Blocks", "Relates", "Duplicate").
-        comment: Optional comment on the link.
+        comment: Optional markdown comment on the link.
     """
     body: dict[str, Any] = {
         "type": {"name": link_type},
@@ -29,15 +30,7 @@ async def create_jira_link(
         "outwardIssue": {"key": outward_issue},
     }
     if comment:
-        body["comment"] = {
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                    {"type": "paragraph", "content": [{"type": "text", "text": comment}]}
-                ],
-            }
-        }
+        body["comment"] = {"body": markdown_to_adf(comment)}
     return await get_client().jira_post("issueLink", body=body)
 
 

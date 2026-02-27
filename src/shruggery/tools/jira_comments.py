@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from shruggery.client import get_client
 from shruggery.server import mcp
+from shruggery.utils.formatting import markdown_to_adf
 
 
 @mcp.tool()
@@ -29,20 +30,9 @@ async def add_jira_comment(issue_key: str, body_text: str) -> str:
 
     Args:
         issue_key: Issue key.
-        body_text: Comment text (plain text, converted to ADF).
+        body_text: Comment text (markdown, converted to ADF).
     """
-    body = {
-        "body": {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": body_text}],
-                }
-            ],
-        }
-    }
+    body = {"body": markdown_to_adf(body_text)}
     return await get_client().jira_post(f"issue/{issue_key}/comment", body=body)
 
 
@@ -55,20 +45,9 @@ async def update_jira_comment(
     Args:
         issue_key: Issue key.
         comment_id: Comment ID.
-        body_text: New comment text (plain text, converted to ADF).
+        body_text: New comment text (markdown, converted to ADF).
     """
-    body = {
-        "body": {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": body_text}],
-                }
-            ],
-        }
-    }
+    body = {"body": markdown_to_adf(body_text)}
     return await get_client().jira_put(
         f"issue/{issue_key}/comment/{comment_id}", body=body
     )

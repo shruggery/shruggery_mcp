@@ -6,6 +6,7 @@ from typing import Any
 
 from shruggery.client import get_client
 from shruggery.server import mcp
+from shruggery.utils.formatting import markdown_to_adf
 
 
 @mcp.tool()
@@ -37,18 +38,12 @@ async def add_jira_worklog(
     Args:
         issue_key: Issue key.
         time_spent: Time spent string (e.g. "2h 30m", "1d").
-        comment: Optional comment text.
+        comment: Optional markdown comment text.
         started: When the work started (ISO datetime). Defaults to now.
     """
     body: dict[str, Any] = {"timeSpent": time_spent}
     if comment:
-        body["comment"] = {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {"type": "paragraph", "content": [{"type": "text", "text": comment}]}
-            ],
-        }
+        body["comment"] = markdown_to_adf(comment)
     if started:
         body["started"] = started
     return await get_client().jira_post(f"issue/{issue_key}/worklog", body=body)
@@ -68,20 +63,14 @@ async def update_jira_worklog(
         issue_key: Issue key.
         worklog_id: Worklog ID.
         time_spent: New time spent string.
-        comment: New comment text.
+        comment: New markdown comment text.
         started: New start time.
     """
     body: dict[str, Any] = {}
     if time_spent:
         body["timeSpent"] = time_spent
     if comment:
-        body["comment"] = {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {"type": "paragraph", "content": [{"type": "text", "text": comment}]}
-            ],
-        }
+        body["comment"] = markdown_to_adf(comment)
     if started:
         body["started"] = started
     return await get_client().jira_put(

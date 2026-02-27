@@ -6,6 +6,7 @@ from typing import Any
 
 from shruggery.client import get_client
 from shruggery.server import mcp
+from shruggery.utils.formatting import markdown_to_adf
 
 
 @mcp.tool()
@@ -44,7 +45,7 @@ async def create_jira_issue(
         project_key: Project key (e.g. "PROJ").
         summary: Issue summary / title.
         issue_type: Issue type name (default "Task").
-        description: Plain-text description (converted to ADF paragraph).
+        description: Markdown description (converted to ADF).
         fields: Additional fields dict merged into the request.
     """
     body: dict[str, Any] = {
@@ -55,16 +56,7 @@ async def create_jira_issue(
         }
     }
     if description:
-        body["fields"]["description"] = {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": description}],
-                }
-            ],
-        }
+        body["fields"]["description"] = markdown_to_adf(description)
     if fields:
         body["fields"].update(fields)
     return await get_client().jira_post("issue", body=body)
@@ -128,29 +120,14 @@ async def transition_jira_issue(
         issue_key: Issue key.
         transition_id: Transition ID (from get_jira_transitions).
         fields: Fields to set during transition.
-        comment: Optional comment to add during transition.
+        comment: Optional markdown comment to add during transition.
     """
     body: dict[str, Any] = {"transition": {"id": transition_id}}
     if fields:
         body["fields"] = fields
     if comment:
         body["update"] = {
-            "comment": [
-                {
-                    "add": {
-                        "body": {
-                            "type": "doc",
-                            "version": 1,
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [{"type": "text", "text": comment}],
-                                }
-                            ],
-                        }
-                    }
-                }
-            ]
+            "comment": [{"add": {"body": markdown_to_adf(comment)}}]
         }
     return await get_client().jira_post(f"issue/{issue_key}/transitions", body=body)
 
