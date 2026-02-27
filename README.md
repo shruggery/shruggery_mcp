@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Shruggery" width="200">
+  <img src="logo.png" alt="Shruggery" width="360">
 </p>
 
 # Shruggery
@@ -22,7 +22,17 @@ The hosted Atlassian MCP (`mcp.atlassian.com/v1/sse`) covers basic Jira/Confluen
 
 ## Setup
 
-### 1. Environment Variables
+### 1. Create an Atlassian API Token
+
+Shruggery authenticates via [Atlassian API tokens](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/) (basic auth). You'll need one tied to your Atlassian account:
+
+1. Go to **https://id.atlassian.com/manage-profile/security/api-tokens**
+2. Click **Create API token**, give it a label (e.g. "Shruggery MCP")
+3. Copy the token — you won't be able to see it again
+
+You'll also need your **site name**, which is the subdomain of your Atlassian Cloud instance (e.g. if your Jira is at `acme.atlassian.net`, the site name is `acme.atlassian.net`).
+
+### 2. Environment Variables
 
 Copy `.env.example` to `.env` and fill in your values:
 
@@ -31,15 +41,15 @@ cp .env.example .env
 ```
 
 ```env
-ATLASSIAN_EMAIL=you@example.com
-ATLASSIAN_API_TOKEN=your-api-token          # https://id.atlassian.com/manage-profile/security/api-tokens
-ATLASSIAN_SITE=yoursite.atlassian.net
+ATLASSIAN_EMAIL=you@example.com             # the email on your Atlassian account
+ATLASSIAN_API_TOKEN=your-api-token          # from step 1
+ATLASSIAN_SITE=yoursite.atlassian.net       # your Jira/Confluence cloud URL
 ATLASSIAN_CLOUD_ID=                         # optional, auto-discovered if omitted
 USER_AGENT=Mozilla/5.0 (...)                # optional, defaults to Firefox UA
 SHRUGGERY_DOWNLOAD_DIR=/tmp/shruggery       # where attachments are saved
 ```
 
-### 2. Install
+### 3. Install
 
 ```bash
 python3 -m venv .venv
@@ -48,13 +58,13 @@ python3 -m venv .venv
 
 Or just run `./run_mcp.sh` — it creates the venv automatically on first run.
 
-### 3. Verify
+### 4. Verify
 
 ```bash
 .venv/bin/python -m shruggery.server
 ```
 
-### 4. Register in Claude Code
+### 5. Register in Claude Code
 
 Add to your `.claude.json` or project `.mcp.json`:
 
