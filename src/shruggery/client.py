@@ -27,6 +27,7 @@ class AtlassianClient:
                 "X-Atlassian-Token": "no-check",
             },
             timeout=httpx.Timeout(30.0, connect=10.0),
+            follow_redirects=True,
         )
 
     # ── URL builders ────────────────────────────────────────────
