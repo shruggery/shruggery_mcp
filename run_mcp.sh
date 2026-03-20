@@ -3,10 +3,17 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
-# Create venv if missing
-if [ ! -d .venv ]; then
-    python3 -m venv .venv
-    .venv/bin/pip install -e .
+# Auto-detect architecture for venv selection
+if [ "$(uname -m)" = "arm64" ]; then
+    VENV=".venv_laptop"
+else
+    VENV=".venv"
 fi
 
-exec .venv/bin/python -m shruggery
+# Create venv if missing
+if [ ! -d "$VENV" ]; then
+    python3 -m venv "$VENV"
+    "$VENV/bin/pip" install -e .
+fi
+
+exec "$VENV/bin/python" -m shruggery
