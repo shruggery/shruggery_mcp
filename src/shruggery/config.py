@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 _DEFAULT_UA = "Shruggery/0.1.0"
 
 
+_DEFAULT_JSM_PREFIXES = "SUPPORT"
+
+
 @dataclass(frozen=True)
 class Settings:
     email: str
@@ -19,6 +22,7 @@ class Settings:
     cloud_id: str | None = None
     user_agent: str = _DEFAULT_UA
     download_dir: Path = field(default_factory=lambda: Path("/tmp/shruggery"))
+    jsm_project_prefixes: tuple[str, ...] = field(default_factory=lambda: (_DEFAULT_JSM_PREFIXES,))
 
     @property
     def jira_base(self) -> str:
@@ -60,6 +64,9 @@ def load_settings() -> Settings:
             "ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN, and ATLASSIAN_SITE must be set"
         )
 
+    raw_prefixes = os.environ.get("JSM_PROJECT_PREFIXES", _DEFAULT_JSM_PREFIXES)
+    jsm_prefixes = tuple(p.strip().upper() for p in raw_prefixes.split(",") if p.strip())
+
     return Settings(
         email=email,
         api_token=api_token,
@@ -67,4 +74,5 @@ def load_settings() -> Settings:
         cloud_id=os.environ.get("ATLASSIAN_CLOUD_ID") or None,
         user_agent=os.environ.get("USER_AGENT", _DEFAULT_UA),
         download_dir=Path(os.environ.get("SHRUGGERY_DOWNLOAD_DIR", "/tmp/shruggery")),
+        jsm_project_prefixes=jsm_prefixes,
     )

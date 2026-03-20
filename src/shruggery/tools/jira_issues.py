@@ -113,22 +113,38 @@ async def transition_jira_issue(
     transition_id: str,
     fields: dict[str, Any] | None = None,
     comment: str | None = None,
+    comment_internal: bool = False,
+    comment_public_override: bool = False,
 ) -> str:
     """Transition a Jira issue to a new status.
+
+    For JSM projects (e.g. SUPPORT), transition comments are customer-visible
+    by default. Use comment_internal=true for an internal note.
 
     Args:
         issue_key: Issue key.
         transition_id: Transition ID (from get_jira_transitions).
         fields: Fields to set during transition.
         comment: Optional markdown comment to add during transition.
+        comment_internal: Post transition comment as internal note.
+        comment_public_override: Explicitly allow a public comment on JSM projects.
     """
+    if comment:
+        from shruggery.tools.jira_comments import _jsm_guard
+        err = _jsm_guard(issue_key, comment_internal, comment_public_override)
+        if err:
+            return err
+
     body: dict[str, Any] = {"transition": {"id": transition_id}}
     if fields:
         body["fields"] = fields
     if comment:
-        body["update"] = {
-            "comment": [{"add": {"body": markdown_to_adf(comment)}}]
-        }
+        comment_obj: dict[str, Any] = {"body": markdown_to_adf(comment)}
+        if comment_internal:
+            comment_obj["properties"] = [
+                {"key": "sd.public.comment", "value": {"internal": True}}
+            ]
+        body["update"] = {"comment": [{"add": comment_obj}]}
     return await get_client().jira_post(f"issue/{issue_key}/transitions", body=body)
 
 
