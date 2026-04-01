@@ -64,15 +64,18 @@ async def get_jira_sprints(
 async def get_jira_sprint_issues(
     sprint_id: int,
     start_at: int = 0,
-    max_results: int = 50,
+    max_results: int = 25,
     fields: str | None = None,
 ) -> str:
     """Get issues in a sprint.
 
+    Returns up to 25 issues per call. Use start_at for pagination.
+    Use ``fields`` to limit response size.
+
     Args:
         sprint_id: Sprint ID.
         start_at: Pagination offset.
-        max_results: Max results.
+        max_results: Max results (default 25).
         fields: Comma-separated field names.
     """
     params: dict = {"startAt": start_at, "maxResults": max_results}
@@ -85,15 +88,18 @@ async def get_jira_sprint_issues(
 async def get_jira_backlog(
     board_id: int,
     start_at: int = 0,
-    max_results: int = 50,
+    max_results: int = 25,
     fields: str | None = None,
 ) -> str:
     """Get backlog issues for a board.
 
+    Returns up to 25 issues per call. Use start_at for pagination.
+    Use ``fields`` to limit response size.
+
     Args:
         board_id: Board ID.
         start_at: Pagination offset.
-        max_results: Max results.
+        max_results: Max results (default 25).
         fields: Comma-separated field names.
     """
     params: dict = {"startAt": start_at, "maxResults": max_results}

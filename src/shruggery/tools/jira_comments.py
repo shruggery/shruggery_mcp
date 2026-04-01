@@ -35,14 +35,17 @@ def _comment_body(body_text: str, internal: bool) -> dict:
 
 @mcp.tool()
 async def get_jira_comments(
-    issue_key: str, start_at: int = 0, max_results: int = 50
+    issue_key: str, start_at: int = 0, max_results: int = 20
 ) -> str:
     """Get comments on a Jira issue.
+
+    Returns up to 20 comments per call (ADF bodies are large).
+    Use start_at for pagination — response includes ``total`` and ``startAt``.
 
     Args:
         issue_key: Issue key.
         start_at: Pagination offset.
-        max_results: Max comments to return.
+        max_results: Max comments to return (default 20).
     """
     return await get_client().jira_get(
         f"issue/{issue_key}/comment",

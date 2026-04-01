@@ -12,16 +12,19 @@ async def search_jira_jql(
     fields: str | None = None,
     expand: str | None = None,
     next_page_token: str | None = None,
-    max_results: int = 50,
+    max_results: int = 25,
 ) -> str:
     """Search Jira issues using JQL.
+
+    Returns up to 25 issues per call. Use next_page_token for pagination.
+    Use ``fields`` to limit response size (e.g. "summary,status,assignee").
 
     Args:
         jql: JQL query string.
         fields: Comma-separated field names to return.
         expand: Comma-separated expansions.
         next_page_token: Pagination token from a previous response.
-        max_results: Max results (up to 100).
+        max_results: Max results per page (default 25, max 100).
     """
     body: dict = {
         "jql": jql,

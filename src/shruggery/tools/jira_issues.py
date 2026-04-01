@@ -163,14 +163,17 @@ async def assign_jira_issue(issue_key: str, account_id: str | None = None) -> st
 
 @mcp.tool()
 async def get_jira_issue_changelog(
-    issue_key: str, start_at: int = 0, max_results: int = 50
+    issue_key: str, start_at: int = 0, max_results: int = 30
 ) -> str:
     """Get the changelog of a Jira issue.
+
+    Returns up to 30 entries per call. Use start_at for pagination —
+    response includes ``total`` and ``startAt``.
 
     Args:
         issue_key: Issue key.
         start_at: Pagination offset.
-        max_results: Max items to return.
+        max_results: Max items to return (default 30).
     """
     return await get_client().jira_get(
         f"issue/{issue_key}/changelog",
