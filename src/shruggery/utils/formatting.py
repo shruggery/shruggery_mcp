@@ -3,24 +3,167 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+from copy import deepcopy
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 MAX_RESPONSE_LEN = 80_000
 
+# Keys that contain pagination/metadata — never trim these from dicts.
+_PAGINATION_KEYS = frozenset({
+    "startAt", "maxResults", "total", "isLast", "nextPageToken",
+    "size", "limit", "start", "_links", "cursor",
+})
+
+_COMPACT = (",", ":")
+
+
+def _json_size(obj: Any) -> int:
+    """Compact-serialized byte length of *obj*."""
+    return len(json.dumps(obj, separators=_COMPACT, default=str))
+
+
+def _find_trimmable_arrays(
+    obj: Any, path: str = "", min_items: int = 3,
+) -> list[tuple[str, Any, str, list]]:
+    """Walk *obj* and collect ``(path, parent_dict, key, array)`` for every
+    list with >= *min_items* elements that lives inside a dict (so we can
+    inject a sibling ``_truncated`` key).
+    """
+    results: list[tuple[str, Any, str, list]] = []
+
+    if isinstance(obj, dict):
+        for key, val in obj.items():
+            if key.startswith("_"):
+                continue  # skip metadata keys
+            child_path = f"{path}.{key}" if path else key
+            if isinstance(val, list) and len(val) >= min_items:
+                results.append((child_path, obj, key, val))
+            if isinstance(val, (dict, list)):
+                results.extend(
+                    _find_trimmable_arrays(val, child_path, min_items)
+                )
+    elif isinstance(obj, list):
+        for i, val in enumerate(obj):
+            child_path = f"{path}[{i}]"
+            if isinstance(val, (dict, list)):
+                results.extend(
+                    _find_trimmable_arrays(val, child_path, min_items)
+                )
+
+    return results
+
+
+def _trim_to_budget(data: Any, budget: int) -> dict[str, dict]:
+    """Trim large arrays in *data* (mutated in-place) until compact JSON
+    fits within *budget* bytes.
+
+    Returns a ``{dotted_path: {"total": N, "returned": M}}`` truncation
+    manifest (empty dict if nothing was trimmed).
+    """
+    current = _json_size(data)
+    if current <= budget:
+        return {}
+
+    arrays = _find_trimmable_arrays(data)
+    if not arrays:
+        return {}
+
+    # Sort by serialized size, largest first — trim the biggest offenders.
+    sized = []
+    for path, parent, key, arr in arrays:
+        sized.append((_json_size(arr), path, parent, key, arr))
+    sized.sort(key=lambda x: x[0], reverse=True)
+
+    manifest: dict[str, dict] = {}
+
+    for arr_size, path, parent, key, arr in sized:
+        current = _json_size(data)
+        if current <= budget:
+            break
+
+        total = len(arr)
+        overage = current - budget
+
+        # Estimate average item size, figure out how many to keep.
+        avg_item = max(arr_size // total, 1)
+        items_to_drop = max((overage // avg_item) + 1, 1)
+        keep = max(total - items_to_drop, 1)
+
+        # Verify it actually fits — shrink further if estimate was off.
+        while keep > 1:
+            candidate = arr[:keep]
+            saved = arr_size - _json_size(candidate)
+            if current - saved <= budget:
+                break
+            keep = max(keep // 2, 1)
+
+        parent[key] = arr[:keep]
+        manifest[path] = {"total": total, "returned": keep}
+        log.warning("Response truncated: %s %d -> %d items", path, total, keep)
+
+    return manifest
+
 
 def fmt(data: Any) -> str:
-    """Format API response data as indented JSON string, truncated if needed."""
-    text = json.dumps(data, indent=2, default=str)
-    if len(text) > MAX_RESPONSE_LEN:
-        return text[:MAX_RESPONSE_LEN] + "\n... (truncated)"
-    return text
+    """Format API response as compact JSON, structurally truncating if needed.
+
+    1. Compact-serialize.  If fits, return.
+    2. Deep-copy, find large arrays, trim from the end until it fits.
+       Inject ``_truncated`` metadata dict as sibling key.
+    3. Fallback: if still too big (giant scalar blob), return an envelope
+       with all scalar top-level keys preserved.
+
+    Output is **always valid JSON**.
+    """
+    text = json.dumps(data, separators=_COMPACT, default=str)
+    if len(text) <= MAX_RESPONSE_LEN:
+        return text
+
+    # --- structural trimming on a deep copy ---
+    trimmed = deepcopy(data)
+    manifest = _trim_to_budget(trimmed, MAX_RESPONSE_LEN)
+
+    # Inject truncation metadata as a sibling key on the root dict.
+    if manifest and isinstance(trimmed, dict):
+        trimmed["_truncated"] = manifest
+
+    result = json.dumps(trimmed, separators=_COMPACT, default=str)
+
+    if len(result) <= MAX_RESPONSE_LEN:
+        return result
+
+    # --- fallback: scalar-only envelope ---
+    log.warning(
+        "Response still too large after structural trim (%d bytes), "
+        "falling back to scalar envelope",
+        len(result),
+    )
+    fallback: dict[str, Any] = {
+        "_truncated": manifest or True,
+        "_error": "Response too large even after structural trimming",
+        "_original_size": len(text),
+        "_max_size": MAX_RESPONSE_LEN,
+    }
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k in _PAGINATION_KEYS:
+                fallback[k] = v
+            elif isinstance(v, (int, float, bool, type(None))):
+                fallback[k] = v
+            elif isinstance(v, str) and len(v) < 1000:
+                fallback[k] = v
+    return json.dumps(fallback, separators=_COMPACT, default=str)
 
 
 def error_msg(status: int, body: Any) -> str:
     """Format an error response."""
     return json.dumps(
-        {"error": True, "status": status, "detail": body}, indent=2, default=str
+        {"error": True, "status": status, "detail": body},
+        separators=_COMPACT, default=str,
     )
 
 
