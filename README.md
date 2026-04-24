@@ -46,6 +46,7 @@ ATLASSIAN_API_TOKEN=your-api-token          # from step 1
 ATLASSIAN_SITE=yoursite.atlassian.net       # your Jira/Confluence cloud URL
 ATLASSIAN_CLOUD_ID=                         # optional, auto-discovered if omitted
 SHRUGGERY_DOWNLOAD_DIR=/tmp/shruggery       # where attachments are saved
+JSM_PROJECT_PREFIXES=SUPPORT                # comma-separated JSM project keys (gates internal-comment safety guard)
 # USER_AGENT=...                            # optional, overrides default — may break MCP if Atlassian rejects it
 ```
 
@@ -296,3 +297,12 @@ The key feature missing from the official Atlassian MCP.
 - **All tools return JSON strings** — formatted with `json.dumps(indent=2)`, truncated at 80K chars
 - **Error responses** are structured: `{"error": true, "status": 400, "detail": ...}`
 - **Markdown → ADF conversion** for comments/descriptions: headings, lists, tables, code blocks, blockquotes, bold/italic/links are converted to Atlassian Document Format — no external dependencies
+
+## Security Model
+
+Shruggery is a **local stdio MCP server** that runs as your user account and holds your Atlassian API token. Keep these properties in mind:
+
+- **Tool calls that accept a file path** (`upload_jira_attachment`, `upload_confluence_attachment`) will read **any file your user can read** and POST it to your Atlassian site. Treat tool arguments the same way you'd treat a shell command.
+- **Don't expose this server to untrusted MCP clients.** Anything that can drive the stdio pipe can read/write Jira + Confluence under your identity, and can upload local files.
+- **Download paths are sanitized.** `download_*` tools strip path components from filenames and reject `..`/absolute `subdir` values — downloads cannot escape `SHRUGGERY_DOWNLOAD_DIR`.
+- **Credentials live in `.env`.** `.env` is gitignored; only `.env.example` is tracked.
