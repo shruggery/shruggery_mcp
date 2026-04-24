@@ -195,11 +195,22 @@ class AtlassianClient:
 
     async def download(self, url: str, filename: str, subdir: str = "") -> str:
         """Stream-download a file. Returns the local path."""
-        dl_dir = self.settings.download_dir
+        safe_name = Path(filename).name
+        if not safe_name or safe_name in (".", ".."):
+            return error_msg(400, f"Invalid filename: {filename!r}")
+
+        base = self.settings.download_dir.resolve()
+        dl_dir = base
         if subdir:
-            dl_dir = dl_dir / subdir
+            sub = Path(subdir)
+            if sub.is_absolute() or any(part == ".." for part in sub.parts):
+                return error_msg(400, f"Invalid subdir: {subdir!r}")
+            dl_dir = (base / sub).resolve()
+            if base != dl_dir and base not in dl_dir.parents:
+                return error_msg(400, "Path escapes download dir")
+
         dl_dir.mkdir(parents=True, exist_ok=True)
-        dest = dl_dir / filename
+        dest = dl_dir / safe_name
 
         async with self._http.stream("GET", url) as resp:
             if resp.status_code >= 400:
